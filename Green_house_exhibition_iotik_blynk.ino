@@ -11,6 +11,10 @@
 #include <Adafruit_BMP085_U.h>
 #include <ArduinoJson.h>
 
+// Нахождение максимума из двух чисел
+#undef max
+#define max(a,b) ((a)>(b)?(a):(b))
+
 // Датчики DS18B20
 #define DS18B20_1 0
 #define DS18B20_2 2
@@ -333,6 +337,7 @@ BLYNK_WRITE(V9)
 void sendDataIot()
 {
   // Подключение к серверу
+  WiFiClient client;
   Serial.println("Connecting to IoT server...");
   if (client.connect(iot_address, 80))
   {
