@@ -130,7 +130,7 @@ void setup()
   Serial.println(ssid);
 
   // Инициализация Blynk и Wi-Fi
-  //Blynk.begin(auth, blynk_ip, 8442);
+  Blynk.begin(auth, ssid, pass, blynk_ip, 8442);
 
   // Инициализация датчиков температуры DS18B20
   ds_sensor1.begin();
