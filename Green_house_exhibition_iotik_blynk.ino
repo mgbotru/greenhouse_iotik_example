@@ -59,7 +59,7 @@ IPAddress blynk_ip(139, 59, 206, 133);
 #define DS1_UPDATE_TIME 1000
 #define DS2_UPDATE_TIME 1000
 #define ANALOG_UPDATE_TIME 1000
-#define IOT_UPDATE_TIME 5000
+#define IOT_UPDATE_TIME 10000
 #define BLYNK_UPDATE_TIME 1000
 
 // Счетчики для асинхронных таймеров
@@ -302,6 +302,7 @@ void sendBlynk()
   Blynk.virtualWrite(V4, sensorValues[ds18b20_temp2]); delay(50);
   Blynk.virtualWrite(V5, sensorValues[soil_moisture2]); delay(50);
   Blynk.virtualWrite(V6, sensorValues[sensor_light]); delay(50);
+  Blynk.virtualWrite(V11, sensorValues[air_press]); delay(50);
   Serial.println("Data successfully sent!");
 }
 
@@ -311,7 +312,7 @@ BLYNK_WRITE(V7)
   light_state_blynk = param.asInt();
   Serial.print("Light power: ");
   Serial.println(light_state_blynk);
-  analogWrite(LAMP, max(light_state_ptc, light_state_blynk) * 2.55);
+  analogWrite(LAMP, max(light_state_ptc, light_state_blynk) * 10.23);
 }
 
 // Управление вентиляцией с Blynk
@@ -333,6 +334,15 @@ BLYNK_WRITE(V9)
   digitalWrite(PUMP, pump_state_ptc | pump_state_blynk);
 }
 
+// Управление нагревателем с Blynk
+BLYNK_WRITE(V10)
+{
+  heater_state_blynk = param.asInt();
+  Serial.print("Heater power: ");
+  Serial.println(heater_state_blynk);
+  digitalWrite(HEATER, heater_state_ptc | heater_state_blynk);
+}
+
 // Подключение к серверу IoT ThingWorx
 void sendDataIot()
 {
@@ -348,18 +358,25 @@ void sendDataIot()
       Serial.println("Sending data to IoT server...\n");
       Serial.print("POST /Thingworx/Things/");
       client.print("POST /Thingworx/Things/");
+      Blynk.run();
       Serial.print(thingName);
       client.print(thingName);
+      Blynk.run();
       Serial.print("/Services/");
       client.print("/Services/");
+      Blynk.run();
       Serial.print(serviceName);
       client.print(serviceName);
+      Blynk.run();
       Serial.print("?appKey=");
       client.print("?appKey=");
+      Blynk.run();
       Serial.print(appKey);
       client.print(appKey);
+      Blynk.run();
       Serial.print("&method=post&x-thingworx-session=true");
       client.print("&method=post&x-thingworx-session=true");
+      Blynk.run();
       // Отправка данных с датчиков
       for (int idx = 0; idx < sensorCount; idx ++)
       {
@@ -367,24 +384,32 @@ void sendDataIot()
         client.print("&");
         Serial.print(sensorNames[idx]);
         client.print(sensorNames[idx]);
+        Blynk.run();
         Serial.print("=");
         client.print("=");
         Serial.print(sensorValues[idx]);
         client.print(sensorValues[idx]);
+        Blynk.run();
       }
       // Закрываем пакет
       Serial.println(" HTTP/1.1");
       client.println(" HTTP/1.1");
+      Blynk.run();
       Serial.println("Accept: application/json");
       client.println("Accept: application/json");
+      Blynk.run();
       Serial.print("Host: ");
       client.print("Host: ");
+      Blynk.run();
       Serial.println(iot_server);
       client.println(iot_server);
+      Blynk.run();
       Serial.println("Content-Type: application/json");
       client.println("Content-Type: application/json");
+      Blynk.run();
       Serial.println();
       client.println();
+      Blynk.run();
 
       // Ждем ответа от сервера
       timer_iot_timeout = millis();
@@ -429,6 +454,7 @@ void sendDataIot()
       if (json_array.success())
       {
         pump_state_ptc = json_array["pump_state"];
+        heater_state_ptc = json_array["heater_state"];
         window_state_ptc = json_array["window_state"];
         light_state_ptc = json_array["light_state"];
         if (window_state_ptc)
@@ -442,6 +468,7 @@ void sendDataIot()
       }
       Serial.println("Pump state:   " + String(pump_state_ptc));
       Serial.println("Light state:  " + String(light_state_ptc));
+      Serial.println("Heater state: " + String(heater_state_ptc));
       Serial.println("Window state: " + String(window_state_ptc));
       Serial.println();
 
@@ -461,9 +488,11 @@ void controlDevices()
   servo_1.write(max(window_state_ptc, window_state_blynk));
   delay(512);
   // Освещение
-  analogWrite(LAMP, max(light_state_ptc, light_state_blynk) * 2.55);
+  analogWrite(LAMP, max(light_state_ptc, light_state_blynk) * 10.23);
   // Помпа
   digitalWrite(PUMP, pump_state_ptc | pump_state_blynk);
+  // Нагреватель
+  digitalWrite(HEATER, heater_state_ptc | heater_state_blynk);
 }
 
 // Print sensors data to terminal
